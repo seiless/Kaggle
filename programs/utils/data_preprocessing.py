@@ -82,6 +82,8 @@ class Data_overview:
         else:
             plot_df = plot_df[sorted(plot_df.columns)]
 
+        total_counts = df[category_col].value_counts().to_dict()
+
         plot_df.plot(kind='bar', stacked=True, color=['lightgray', 'steelblue'], figsize=(8, 5))
 
         for i, (idx, row) in enumerate(plot_df.iterrows()):
@@ -91,6 +93,7 @@ class Data_overview:
                 if val > 0:
                     plt.text(i, cumulative + val / 2, f"{val * 100:.0f}%", ha='center', va='center', fontsize=10)
                     cumulative += val
+            ax.text(i, 1.02, f"n={total_counts[idx]}", ha='center', va='bottom', fontsize=10, fontweight='bold')
 
         plt.title(f"Normalized Ratio of {target_col} per {category_col}")
         plt.ylabel("Percentage")
