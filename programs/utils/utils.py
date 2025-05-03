@@ -48,7 +48,7 @@ def evaluate_null_columns_prediction_model(df: pd.DataFrame, column: str, featur
     return pd.DataFrame({"Actual": y_val, "Predicted": y_pred_rounded})
 
 
-def plot_binary_ratio_by_category(df: pd.DataFrame, category_col: str, target_col: str) -> plt.Figure:
+def plot_binary_ratio_by_category(df: pd.DataFrame, category_col: str, target_col: str) -> None:
     """
     Visualize the 0/1 ratio of a binary target variable
     for each category of a categorical feature
@@ -84,8 +84,7 @@ def plot_binary_ratio_by_category(df: pd.DataFrame, category_col: str, target_co
     sns.despine()
     plt.tight_layout()
     plt.show()
-
-    return ax.get_figure()
+    return
 
 
 def cluster_titles_by_survival(df: pd.DataFrame, category_col: str, target_col: str,
