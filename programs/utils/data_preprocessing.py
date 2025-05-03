@@ -3,11 +3,13 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from xgboost import XGBRegressor
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 class Data_overview:
     # return columns list about 
-    def _remove_matching_columns(df:pd.DataFrame, exclude_list: list = None) -> list:
+    def remove_matching_columns(df:pd.DataFrame, exclude_list: list = None) -> list:
         """
         returns a list of column names from the given DataFrame after removing the columns specified in sxclude_list.
 
@@ -54,3 +56,47 @@ class Data_overview:
         print(f" R²  : {r2:.2f}")
 
         return pd.DataFrame({"Actual": y_val, "Predicted": y_pred})
+
+    def plot_binary_ratio_by_category(df: pd.DataFrame, category_col: str, target_col: str) -> plt.Figure:
+        """
+        Visualize the 0/1 ratio of a binary target variable 
+        for each category of a categorical feature 
+        using a 100% stacked bar chart in Seaborn style.
+
+        Args:
+            df (pd.DataFrame): _description_
+            category_col (str): _description_
+            target_col (str): _description_
+
+        Returns:
+            plt.Figure: _description_
+        """
+        count_df = df.groupby([category_col, target_col]).size().reset_index(name='count')
+
+        count_df['ratio'] = count_df.groupby(category_col)['count'].transform(lambda x: x / x.sum())
+
+        plot_df = count_df.pivot(index=category_col, columns=target_col, values='ratio').fillna(0)
+
+        if 0 in plot_df.columns and 1 in plot_df.columns:
+            plot_df = plot_df[[0, 1]]
+        else:
+            plot_df = plot_df[sorted(plot_df.columns)]
+
+        plot_df.plot(kind='bar', stacked=True, color=['lightgray', 'steelblue'], figsize=(8, 5))
+
+        for i, (idx, row) in enumerate(plot_df.iterrows()):
+            cumulative = 0
+            for col in plot_df.columns:
+                val = row[col]
+                if val > 0:
+                    plt.text(i, cumulative + val / 2, f"{val * 100:.0f}%", ha='center', va='center', fontsize=10)
+                    cumulative += val
+
+        plt.title(f"Normalized Ratio of {target_col} per {category_col}")
+        plt.ylabel("Percentage")
+        plt.xlabel(category_col)
+        plt.ylim(0, 1.05)
+        plt.legend(title=target_col)
+        sns.despine()
+        plt.tight_layout()
+        plt.show()
