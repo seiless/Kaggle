@@ -4,6 +4,7 @@ from xgboost import XGBRegressor
 import pandas as pd
 import numpy as np
 
+
 class Data_overview:
     # return columns list about 
     def _remove_matching_columns(df:pd.DataFrame, exclude_list: list = None) -> list:
@@ -21,7 +22,7 @@ class Data_overview:
             return df_columns
         return [col for col in df_columns if col not in exclude_list]
 
-    def evaluate_null_columns_prediction_model(df:pd.DataFrame, column:str, features: list) -> DataFrame:
+    def evaluate_null_columns_prediction_model(df:pd.DataFrame, column:str, features: list) -> pd.DataFrame:
         """
         Train and evaluate an XGBoost regression model using data a numeric column (int or float) that may contain missing (null) values.
 
@@ -43,7 +44,7 @@ class Data_overview:
         model.fit(X_train, y_train)
 
         y_pred = model.predict(X_val)
-        
+
         rmse = np.sqrt(mean_squared_error(y_val, y_pred))
         mae = mean_absolute_error(y_val, y_pred)
         r2 = r2_score(y_val, y_pred)
