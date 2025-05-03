@@ -85,7 +85,7 @@ class Data_overview:
         total_counts = df[category_col].value_counts().to_dict()
 
         plot_df.plot(kind='bar', stacked=True, color=['lightgray', 'steelblue'], figsize=(8, 5))
-
+        ax = plot_df.plot(kind='bar', stacked=True, color=['lightgray', 'steelblue'], figsize=(8, 5))
         for i, (idx, row) in enumerate(plot_df.iterrows()):
             cumulative = 0
             for col in plot_df.columns:
