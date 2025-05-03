@@ -2,11 +2,15 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from xgboost import XGBRegressor
+from sklearn.model_selection import GridSearchCV, train_test_split
+from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, classification_report
+from xgboost import XGBRegressor, XGBClassifier
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
+from sklearn.utils.class_weight import compute_sample_weight
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import classification_report
+from sklearn.preprocessing import LabelEncoder
 
 
 def remove_matching_columns(df: pd.DataFrame, exclude_list: list = None) -> list:
@@ -19,9 +23,10 @@ def remove_matching_columns(df: pd.DataFrame, exclude_list: list = None) -> list
     return [col for col in df_columns if col not in exclude_list]
 
 
-def evaluate_null_columns_prediction_model(df: pd.DataFrame, column: str, features: list) -> pd.DataFrame:
+def evaluate_null_int_columns_prediction_model(df: pd.DataFrame, column: str, features: list) -> None:
     """
     Train and evaluate an XGBoost regression model on a numeric column with missing values.
+    Performs GridSearchCV to tune hyperparameters.
     Returns predicted vs actual values (rounded to nearest int).
     """
     df_known = df[df[column].notnull()].copy()
@@ -31,22 +36,79 @@ def evaluate_null_columns_prediction_model(df: pd.DataFrame, column: str, featur
 
     X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.2, random_state=42)
 
-    model = XGBRegressor(n_estimators=100, random_state=42, verbosity=0)
-    model.fit(X_train, y_train)
+    param_grid = {
+        'n_estimators': [100, 300, 500, 1000],
+        'max_depth': [3, 5, 7],
+        'learning_rate': [0.05, 0.1, 0.2, 0.5],
+        'subsample': [0.8, 1.0],
+        'colsample_bytree': [0.8, 1.0],
+    }
 
-    y_pred = model.predict(X_val)
+    model = XGBRegressor(random_state=42, verbosity=0)
+    grid_search = GridSearchCV(estimator=model,
+                               param_grid=param_grid,
+                               scoring='neg_mean_squared_error',
+                               cv=3,
+                               verbose=2,
+                               n_jobs=-1)
+
+    grid_search.fit(X_train, y_train)
+
+    best_model = grid_search.best_estimator_
+
+    y_pred = best_model.predict(X_val)
     y_pred_rounded = np.round(y_pred)
 
     rmse = np.sqrt(mean_squared_error(y_val, y_pred_rounded))
     mae = mean_absolute_error(y_val, y_pred_rounded)
     r2 = r2_score(y_val, y_pred_rounded)
 
-    print(f" RMSE: {rmse:.2f}")
+    print("Best hyperparameters:")
+    print(grid_search.best_params_)
+    print(f"\n RMSE: {rmse:.2f}")
     print(f" MAE : {mae:.2f}")
     print(f" R²  : {r2:.2f}")
 
-    return pd.DataFrame({"Actual": y_val, "Predicted": y_pred_rounded})
+def evaluate_null_categorical_column_prediction_model(df: pd.DataFrame, column: str, features: list) -> None:
+    """
+    Train and evaluate an XGBoost classification model on a categorical column with missing values.
+    Performs GridSearchCV to tune hyperparameters and prints classification metrics.
+    """
+    df_known = df[df[column].notnull()].copy()
 
+    X = pd.get_dummies(df_known[features])
+    y = df_known[column]
+
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
+
+    param_grid = {
+        'n_estimators': [100, 300, 500, 1000],
+        'max_depth': [3, 5, 7],
+        'learning_rate': [0.05, 0.1, 0.2, 0.5],
+        'subsample': [0.8, 1.0],
+        'colsample_bytree': [0.8, 1.0],
+    }
+    
+    model = XGBClassifier(random_state=42, verbosity=0, use_label_encoder=False)
+    sample_weights = compute_sample_weight(class_weight='balanced', y=y_train)
+    grid_search = GridSearchCV(
+        estimator=model,
+        param_grid=param_grid,
+        scoring='f1_macro',
+        cv=3,
+        verbose=1,
+        n_jobs=-1
+    )
+
+    grid_search.fit(X_train, y_train, sample_weight=sample_weights)
+
+    best_model = grid_search.best_estimator_
+    y_pred = best_model.predict(X_val)
+
+    print("Best hyperparameters:")
+    print(grid_search.best_params_)
+    print("\nClassification Report:")
+    print(classification_report(y_val, y_pred))
 
 def plot_binary_ratio_by_category(df: pd.DataFrame, category_col: str, target_col: str) -> None:
     """
@@ -112,3 +174,55 @@ def cluster_titles_by_survival(df: pd.DataFrame, category_col: str, target_col: 
 
     category_cluster_map = dict(zip(summary_df[category_col], summary_df['Cluster']))
     return category_cluster_map
+
+def evaluate_null_categorical_column_prediction_model_rf(df: pd.DataFrame, category_col: str, features: list) -> None:
+    """
+    Train and evaluate a RandomForest classification model on a categorical column with missing values.
+    Uses Label Encoding instead of One-Hot Encoding for categorical variables.
+    Performs GridSearchCV to tune hyperparameters and prints classification metrics.
+    """
+    df_known = df[df[category_col].notnull()].copy()
+    df_encoded = df_known.copy()
+
+    # 범주형 변수에 Label Encoding 적용
+    label_encoders = {}
+    for col in features:
+        if df_encoded[col].dtype == 'object' or df_encoded[col].dtype.name == 'category':
+            le = LabelEncoder()
+            df_encoded[col] = le.fit_transform(df_encoded[col].astype(str))
+            label_encoders[col] = le
+
+    X = df_encoded[features]
+    y = df_encoded[category_col]
+
+    X_train, X_val, y_train, y_val = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
+
+    param_grid = {
+        'n_estimators': [100, 300, 500],
+        'max_depth': [None, 5, 10],
+        'min_samples_split': [2, 5],
+        'min_samples_leaf': [1, 2],
+        'max_features': ['sqrt', 'log2']
+    }
+
+    model = RandomForestClassifier(random_state=42, class_weight='balanced')
+    sample_weights = compute_sample_weight(class_weight='balanced', y=y_train)
+
+    grid_search = GridSearchCV(
+        estimator=model,
+        param_grid=param_grid,
+        scoring='accuracy',
+        cv=3,
+        verbose=1,
+        n_jobs=-1
+    )
+
+    grid_search.fit(X_train, y_train, sample_weight=sample_weights)
+
+    best_model = grid_search.best_estimator_
+    y_pred = best_model.predict(X_val)
+
+    print("Best hyperparameters:")
+    print(grid_search.best_params_)
+    print("\nClassification Report:")
+    print(classification_report(y_val, y_pred))
