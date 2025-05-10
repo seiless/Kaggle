@@ -10,8 +10,16 @@ from sklearn.metrics import silhouette_score
 from sklearn.utils.class_weight import compute_sample_weight
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
-from sklearn.preprocessing import LabelEncoder
+from sklearn.preprocessing import LabelEncoder, StandardScaler
 
+def plot_outliers(df, column):
+    """
+    Show boxplot to visualize outliers in a numerical column.
+    """
+    plt.figure(figsize=(8, 2))
+    sns.boxplot(x=df[column])
+    plt.title(f'Boxplot for {column}')
+    plt.show()
 
 def remove_matching_columns(df: pd.DataFrame, exclude_list: list = None) -> list:
     """
@@ -226,3 +234,17 @@ def evaluate_null_categorical_column_prediction_model_rf(df: pd.DataFrame, categ
     print(grid_search.best_params_)
     print("\nClassification Report:")
     print(classification_report(y_val, y_pred))
+
+def fill_embarked_with_mode(df,Mode_Column):
+    """
+    A function that fills missing values in the Selected column with the mode
+    """
+    mode_value = df[Mode_Column].mode()[0]
+    return df[Mode_Column].fillna(mode_value)
+
+from sklearn.preprocessing import StandardScaler
+
+def standardize_column(df, column):
+    scaler = StandardScaler()
+    df[column + "_z"] = scaler.fit_transform(df[[column]])
+    return df
