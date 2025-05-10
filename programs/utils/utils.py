@@ -12,7 +12,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import classification_report
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 
-def plot_outliers(df, column):
+def plot_outliers(df, column) -> None:
     """
     Show boxplot to visualize outliers in a numerical column.
     """

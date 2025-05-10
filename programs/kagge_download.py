@@ -30,6 +30,6 @@ def download_and_extract_kaggle_competition(competition_name: str):
 
     # Extract ZIP
     with zipfile.ZipFile(zip_path, 'r') as zip_ref:
-        zip_ref.extractall(comp_name+f'/{comp_name}_csv')
+        zip_ref.extractall(comp_name+'/csvfile')
 
 download_and_extract_kaggle_competition(comp_name)
