@@ -40,8 +40,25 @@ def download_and_extract_kaggle_competition(competition_name: str):
         return
 
     # Extract ZIP
-    with zipfile.ZipFile(zip_path, "r") as zip_ref:
-        zip_ref.extractall(comp_name + "/csvfile")
+    print("Attempting to extract files...")
+    try:
+        if not os.path.exists(zip_path):
+            print(f"Error: Cannot find the file to extract. Path: {zip_path}")
+            print("Please check if the download completed successfully.")
+            return
+
+        with zipfile.ZipFile(zip_path, "r") as zip_ref:
+            extract_path = os.path.join(target_dir, "data")
+            zip_ref.extractall(extract_path)
+
+        os.remove(zip_path)
+        print(f"Extraction complete. Files are saved in: '{extract_path}'")
+
+    except zipfile.BadZipFile:
+        print(f"Error: The file '{zip_path}' is corrupted or not a valid zip file.")
+        print("Please delete the file and try again.")
+    except Exception as e:
+        print(f"An unknown error occurred during extraction: {e}")
 
 
 download_and_extract_kaggle_competition(comp_name)
