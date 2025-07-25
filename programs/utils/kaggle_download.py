@@ -8,8 +8,6 @@ json_path = os.path.join(two_levels_up, "kaggle.json")
 with open(json_path, "r") as f:
     json_data = json.load(f)
 
-comp_name = input()
-
 os.environ["KAGGLE_USERNAME"] = json_data["username"]
 os.environ["KAGGLE_KEY"] = json_data["key"]
 
@@ -59,6 +57,3 @@ def download_and_extract_kaggle_competition(competition_name: str):
         print("Please delete the file and try again.")
     except Exception as e:
         print(f"An unknown error occurred during extraction: {e}")
-
-
-download_and_extract_kaggle_competition(comp_name)
